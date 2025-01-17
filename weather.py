@@ -1,18 +1,24 @@
 from flask import Flask, render_template, request
+from dotenv import load_dotenv
+import os
 import service
 
 app = Flask(__name__)
+load_dotenv()
 
 @app.route("/", methods=["GET", "POST"])
 def home():
+    data = None
+    error = False
     if request.method == "POST":
-        country = request.form.get("country")  # Get the country name from the form
-        data = service.get_weather(country)  # Fetch data for the specified country
-        
-    else:
-        # Default to Haifa if no search is performed
-        data = service.get_weather("haifa")
-    return render_template("index.html", data=data)
+        city = request.form.get("country")
+        try:
+            data = service.get_weather(city)
+            if not data or not data.get("weather"):
+                error = True
+        except Exception:
+            error = True
+    return render_template("index.html", data=data, error=error)
 
 if __name__ == "__main__":
     app.run(debug=True)

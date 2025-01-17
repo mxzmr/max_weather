@@ -81,8 +81,12 @@ def format_weather(response):
         WeatherColumn.HUMID.value: ["mean"],
     })
     daily_dataframe.columns = ["_".join(col) for col in daily_dataframe.columns]  # Flatten MultiIndex columns
-    daily_dataframe.reset_index(inplace=False)
-    daily_dataframe = daily_dataframe.applymap(lambda x: int(x))
+    daily_dataframe.reset_index(inplace=True)  # Changed from False to True
+    
+    # Add formatted date
+    daily_dataframe['date'] = daily_dataframe['time'].dt.strftime('%B %d')
+    
+    daily_dataframe = daily_dataframe.map(lambda x: int(x) if isinstance(x, (int, float)) else x)
     daily_data_json = daily_dataframe.to_dict(orient="records")
     return daily_data_json 
 

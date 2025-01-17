@@ -16,6 +16,9 @@
         .weather-icon {
             font-size: 4rem;
         }
+        .weather-icon-small {
+            font-size: 2.5rem;
+        }
         .card {
             background-color: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
@@ -39,6 +42,38 @@
             background-color: #0056b3;
             border-color: #0056b3;
         }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .date-label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .weather-details {
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -47,8 +82,8 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h3 class="card-title text-center mb-4">Weather Forecast</h3>
-                        <form method="POST" action="/">
+                        <h1 class="card-title text-center mb-4">Weather Forecast</h1>
+                        <form method="POST" action="/" id="weather-form">
                             <div class="mb-3">
                                 <label for="country" class="form-label">Enter City:</label>
                                 <input type="text" id="country" name="country" class="form-control" placeholder="e.g., Haifa" required>
@@ -62,17 +97,30 @@
             </div>
         </div>
 
+        {% if error %}
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="alert alert-danger" role="alert">
+                    <h4 class="alert-heading">Oops! Something went wrong.</h4>
+                    <p>We couldn't find the weather data for the city you entered. Please check your spelling and try again.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {% if data %}
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <h2 class="text-center mb-4">Weather in {{ data["name"] }}, {{ data["country"] }}</h2>
                 <div class="card mb-4">
                     <div class="card-body text-center">
-                        <h4 class="card-title">Today's Weather</h4>
+                        <h3 class="card-title">Today's Weather</h3>
                         <i class="wi wi-day-sunny weather-icon mb-3"></i>
-                        <p class="mb-0"><strong>Max:</strong> {{ data["weather"][0]["temperature_2m_max"] }}°C</p>
-                        <p class="mb-0"><strong>Min:</strong> {{ data["weather"][0]["temperature_2m_min"] }}°C</p>
-                        <p><strong>Humidity:</strong> {{ data["weather"][0]["relative_humidity_2m_mean"] }}%</p>
+                        <div class="weather-details">
+                            <p class="mb-1"><strong>Max:</strong> {{ data["weather"][0]["temperature_2m_max"] }}°C</p>
+                            <p class="mb-1"><strong>Min:</strong> {{ data["weather"][0]["temperature_2m_min"] }}°C</p>
+                            <p class="mb-0"><strong>Humidity:</strong> {{ data["weather"][0]["relative_humidity_2m_mean"] }}%</p>
+                        </div>
                     </div>
                 </div>
                 <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -80,11 +128,13 @@
                     <div class="col">
                         <div class="card h-100">
                             <div class="card-body text-center">
-                                <h5 class="card-title">Day {{ loop.index + 1 }}</h5>
-                                <i class="wi wi-day-cloudy weather-icon mb-3"></i>
-                                <p class="mb-0"><strong>Max:</strong> {{ day["temperature_2m_max"] }}°C</p>
-                                <p class="mb-0"><strong>Min:</strong> {{ day["temperature_2m_min"] }}°C</p>
-                                <p><strong>Humidity:</strong> {{ day["relative_humidity_2m_mean"] }}%</p>
+                                <h5 class="card-title date-label">{{ day["date"] }}</h5>
+                                <i class="wi wi-day-cloudy weather-icon-small mb-3"></i>
+                                <div class="weather-details">
+                                    <p class="mb-1"><strong>Max:</strong> {{ day["temperature_2m_max"] }}°C</p>
+                                    <p class="mb-1"><strong>Min:</strong> {{ day["temperature_2m_min"] }}°C</p>
+                                    <p class="mb-0"><strong>Humidity:</strong> {{ day["relative_humidity_2m_mean"] }}%</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -94,5 +144,13 @@
         </div>
         {% endif %}
     </div>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    <script>
+        document.getElementById('weather-form').addEventListener('submit', function() {
+            document.getElementById('loading').style.display = 'flex';
+        });
+    </script>
 </body>
 </html>

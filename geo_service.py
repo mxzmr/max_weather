@@ -44,8 +44,11 @@ def fetch(url):
 def get_geo(name):
     geo = GeoModel()
     json = fetch(geo.get_url(name))
-    geo.save_country_geo(json["results"][0])
-    return geo
+    
+    if json.get("results"):
+        geo.save_country_geo(json["results"][0])
+        return geo
+    return None
 
 if __name__ == "__main__":
-    print(get_geo("tel aviv"))
+    print(get_geo("haifa"))
