@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Weather Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.10/css/weather-icons.min.css">
+    <style>
+        body {
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+            min-height: 100vh;
+        }
+        .weather-icon {
+            font-size: 4rem;
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+            border-color: #86b7fe;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">Weather Forecast</h3>
+                        <form method="POST" action="/">
+                            <div class="mb-3">
+                                <label for="country" class="form-label">Enter City:</label>
+                                <input type="text" id="country" name="country" class="form-control" placeholder="e.g., Haifa" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Get Forecast</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if data %}
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h2 class="text-center mb-4">Weather in {{ data["name"] }}, {{ data["country"] }}</h2>
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h4 class="card-title">Today's Weather</h4>
+                        <i class="wi wi-day-sunny weather-icon mb-3"></i>
+                        <p class="mb-0"><strong>Max:</strong> {{ data["weather"][0]["temperature_2m_max"] }}°C</p>
+                        <p class="mb-0"><strong>Min:</strong> {{ data["weather"][0]["temperature_2m_min"] }}°C</p>
+                        <p><strong>Humidity:</strong> {{ data["weather"][0]["relative_humidity_2m_mean"] }}%</p>
+                    </div>
+                </div>
+                <div class="row row-cols-1 row-cols-md-3 g-4">
+                    {% for day in data["weather"][1:7] %}
+                    <div class="col">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Day {{ loop.index + 1 }}</h5>
+                                <i class="wi wi-day-cloudy weather-icon mb-3"></i>
+                                <p class="mb-0"><strong>Max:</strong> {{ day["temperature_2m_max"] }}°C</p>
+                                <p class="mb-0"><strong>Min:</strong> {{ day["temperature_2m_min"] }}°C</p>
+                                <p><strong>Humidity:</strong> {{ day["relative_humidity_2m_mean"] }}%</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
