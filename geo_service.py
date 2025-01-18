@@ -1,5 +1,6 @@
 import requests
 import json
+from .errors import WeatherError, WeatherErrorType
 
 
 class GeoModel:
@@ -35,20 +36,35 @@ class GeoModel:
 
 
 def fetch(url):
-    response = requests.get(url)
-    if response:
-        return response.json()
-    else:
-        raise Exception(f"Non-success status code: {response.status_code}")
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 404:
+            raise WeatherError(WeatherErrorType.CITY_NOT_FOUND, "City not found in geocoding service")
+        else:
+            raise WeatherError(WeatherErrorType.API_ERROR, 
+                             f"Geocoding API error: {response.status_code}")
+    except requests.exceptions.ConnectionError:
+        raise WeatherError(WeatherErrorType.NETWORK_ERROR, "Could not connect to geocoding service")
+    except json.JSONDecodeError:
+        raise WeatherError(WeatherErrorType.INVALID_DATA, "Invalid response from geocoding service")
 
 def get_geo(name):
-    geo = GeoModel()
-    json = fetch(geo.get_url(name))
+    if not name or not name.strip():
+        raise WeatherError(WeatherErrorType.CITY_NOT_FOUND, "Empty city name provided")
     
-    if json.get("results"):
-        geo.save_country_geo(json["results"][0])
+    geo = GeoModel()
+    try:
+        json_data = fetch(geo.get_url(name))
+        if not json_data.get("results"):
+            raise WeatherError(WeatherErrorType.CITY_NOT_FOUND, f"No results found for {name}")
+        geo.save_country_geo(json_data["results"][0])
         return geo
-    return None
+    except WeatherError:
+        raise
+    except Exception as e:
+        raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
 
 if __name__ == "__main__":
     print(get_geo("haifa"))

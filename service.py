@@ -2,8 +2,9 @@ import openmeteo_requests
 import requests_cache
 import pandas as pd
 from retry_requests import retry
-import geo_service as geo
 from enum import Enum
+from .errors import WeatherError, WeatherErrorType
+from . import geo_service as geo
 
 
 # Setup the Open-Meteo API client with cache and retry on error
@@ -41,62 +42,83 @@ class WeatherColumn(Enum):
     HUMID = "relative_humidity_2m"
 
 def fetch_weather(city):
-    coordinates = geo.get_geo(city)
-    print((coordinates.__dict__))
-    # Define API URL and parameters
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": coordinates.latitude,
-        "longitude": coordinates.longitude,
-        "hourly": f"{WeatherColumn.TEMP.value},{WeatherColumn.HUMID.value}",
-    }
+    try:
+        coordinates = geo.get_geo(city)
+        if not coordinates:
+            raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
+        
+        # Define API URL and parameters
+        url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": coordinates.latitude,
+            "longitude": coordinates.longitude,
+            "hourly": f"{WeatherColumn.TEMP.value},{WeatherColumn.HUMID.value}",
+        }
 
-    # Fetch weather data
-    responses = openmeteo.weather_api(url, params=params)
-    response = responses[0]
-    return response
+        # Fetch weather data
+        try:
+            responses = openmeteo.weather_api(url, params=params)
+            response = responses[0]
+            return response
+        except Exception as e:
+            raise WeatherError(WeatherErrorType.API_ERROR, str(e))
+            
+    except WeatherError as weather_error:
+        raise weather_error
+    except requests_cache.exceptions.ConnectionError:
+        raise WeatherError(WeatherErrorType.NETWORK_ERROR)
+    except Exception as e:
+        raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
 
 def format_weather(response):
-    # Extract hourly data
-    hourly = response.Hourly()
-    hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-    hourly_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
+    try:
+        # Extract hourly data
+        hourly = response.Hourly()
+        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+        hourly_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
 
-    # Create a DataFrame with hourly data
-    hourly_data = {
-        "time": pd.date_range(
-            start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-            end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-            freq=pd.Timedelta(seconds=hourly.Interval()),
-            inclusive="left"
-        ),
-        WeatherColumn.TEMP.value: hourly_temperature_2m,
-        WeatherColumn.HUMID.value: hourly_humidity_2m,
-    }
-    hourly_dataframe = pd.DataFrame(data=hourly_data)
+        # Create a DataFrame with hourly data
+        hourly_data = {
+            "time": pd.date_range(
+                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
+                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
+                freq=pd.Timedelta(seconds=hourly.Interval()),
+                inclusive="left"
+            ),
+            WeatherColumn.TEMP.value: hourly_temperature_2m,
+            WeatherColumn.HUMID.value: hourly_humidity_2m,
+        }
+        hourly_dataframe = pd.DataFrame(data=hourly_data)
 
-    # Aggregate hourly data into daily summaries
-    daily_dataframe = hourly_dataframe.resample("D", on="time").agg({
-        WeatherColumn.TEMP.value: ["max", "min", "mean"],
-        WeatherColumn.HUMID.value: ["mean"],
-    })
-    daily_dataframe.columns = ["_".join(col) for col in daily_dataframe.columns]  # Flatten MultiIndex columns
-    daily_dataframe.reset_index(inplace=True)  # Changed from False to True
-    
-    # Add formatted date
-    daily_dataframe['date'] = daily_dataframe['time'].dt.strftime('%B %d')
-    
-    daily_dataframe = daily_dataframe.map(lambda x: int(x) if isinstance(x, (int, float)) else x)
-    daily_data_json = daily_dataframe.to_dict(orient="records")
-    return daily_data_json 
-
+        # Aggregate hourly data into daily summaries
+        daily_dataframe = hourly_dataframe.resample("D", on="time").agg({
+            WeatherColumn.TEMP.value: ["max", "min", "mean"],
+            WeatherColumn.HUMID.value: ["mean"],
+        })
+        daily_dataframe.columns = ["_".join(col) for col in daily_dataframe.columns]  # Flatten MultiIndex columns
+        daily_dataframe.reset_index(inplace=True)  # Changed from False to True
+        
+        # Add formatted date
+        daily_dataframe['date'] = daily_dataframe['time'].dt.strftime('%B %d')
+        
+        daily_dataframe = daily_dataframe.map(lambda x: int(x) if isinstance(x, (int, float)) else x)
+        daily_data_json = daily_dataframe.to_dict(orient="records")
+        return daily_data_json 
+    except Exception as e:
+        raise WeatherError(WeatherErrorType.INVALID_DATA, str(e))
 
 def get_weather(city):
-    weather_data = fetch_weather(city)
-    print("weather", type(format_weather(weather_data)))
-    geo_data = geo.get_geo(city).__dict__
-    geo_data["weather"] = format_weather(weather_data) 
-    print("geo", type(geo_data))
-    return geo_data 
+    if not city or len(city.strip()) == 0:
+        raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
+    try:
+        weather_data = fetch_weather(city)
+        geo_data = geo.get_geo(city).__dict__
+        geo_data["weather"] = format_weather(weather_data)
+        return geo_data
+    except WeatherError as weather_error:
+        raise weather_error 
+    except Exception as e:
+        raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
+
 if __name__ == "__main__":
     print("today", get_weather("haifa")["name"])

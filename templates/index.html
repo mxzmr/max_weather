@@ -35,8 +35,8 @@
         <div class="row justify-content-center">
             <div class="col-md-6">
                 <div class="alert alert-danger" role="alert">
-                    <h4 class="alert-heading">Oops! Something went wrong.</h4>
-                    <p>We couldn't find the weather data for the city you entered. Please check your spelling and try again.</p>
+                    <h4 class="alert-heading">{{ error.heading }}</h4>
+                    <p>{{ error.message }}</p>
                 </div>
             </div>
         </div>
