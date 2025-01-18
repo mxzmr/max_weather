@@ -3,8 +3,13 @@ import os
 from logging.handlers import RotatingFileHandler
 
 def setup_logging():
-    # Create logs directory in the same folder as config.py
-    logs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+      # Get the project's root directory
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Define the logs directory path at the root level
+    logs_dir = os.path.join(project_root, 'logs')
+
+    # Create the logs directory if it doesn't exist
     os.makedirs(logs_dir, exist_ok=True)
     
     # Defines log file path

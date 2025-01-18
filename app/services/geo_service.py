@@ -1,6 +1,6 @@
 import requests
 import json
-from .errors import WeatherError, WeatherErrorType
+from ..errors import WeatherError, WeatherErrorType
 
 
 class GeoModel:

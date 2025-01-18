@@ -3,7 +3,7 @@ import requests_cache
 import pandas as pd
 from retry_requests import retry
 from enum import Enum
-from .errors import WeatherError, WeatherErrorType
+from ..errors import WeatherError, WeatherErrorType
 from . import geo_service as geo
 
 
