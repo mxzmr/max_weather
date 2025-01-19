@@ -2,12 +2,12 @@ import requests
 import json
 from ..errors import WeatherError, WeatherErrorType
 
-
 class GeoModel:
-    name: str = ""
-    country: str = ""
-    latitude: float = 0
-    longitude: float = 0
+    def __init__(self):
+        self.name = None
+        self.country = None
+        self.latitude = None
+        self.longitude = None
 
     def __str__(self):
         return f"name: {self.name}, country: {self.country}"
@@ -23,17 +23,6 @@ class GeoModel:
         self.country = data["country"]
         self.latitude = data["latitude"]
         self.longitude = data["longitude"]
-
-    geo_moc = {
-      "id": 2950159,
-      "name": "Berlin",
-      "latitude": 52.52437,
-      "longitude": 13.41053,
-      "elevation": 74.0,
-      "feature_code": "PPLC",
-      "country_code": "DE"
-    }
-
 
 def fetch(url):
     try:

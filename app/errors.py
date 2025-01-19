@@ -6,6 +6,7 @@ class WeatherErrorType(Enum):
     INVALID_DATA = "INVALID_DATA"
     NETWORK_ERROR = "NETWORK_ERROR"
     API_ERROR = "API_ERROR"
+    FETCH_ERROR = "FETCH_ERROR"  # Add this line
 
 class WeatherError(Exception):
     def __init__(self, error_type: WeatherErrorType, detail: str = None):

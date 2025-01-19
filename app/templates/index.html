@@ -51,9 +51,26 @@
                         <h3 class="card-title">Today's Weather</h3>
                         <i class="wi wi-day-sunny weather-icon mb-3"></i>
                         <div class="weather-details">
-                            <p class="mb-1"><strong>Max:</strong> {{ data["weather"][0]["temperature_2m_max"] }}°C</p>
-                            <p class="mb-1"><strong>Min:</strong> {{ data["weather"][0]["temperature_2m_min"] }}°C</p>
-                            <p class="mb-0"><strong>Humidity:</strong> {{ data["weather"][0]["relative_humidity_2m_mean"] }}%</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Temperature</strong></p>
+                                    <p class="mb-1">High: {{ data["weather"][0]["temp_max"] }}°C</p>
+                                    <p class="mb-1">Low: {{ data["weather"][0]["temp_min"] }}°C</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Precipitation</strong></p>
+                                    <p class="mb-1">Chance: {{ data["weather"][0]["precipitation_prob"] }}%</p>
+                                    <p class="mb-1">Rain: {{ data["weather"][0]["showers"] }}mm</p>
+                                    <p class="mb-1">Snow: {{ data["weather"][0]["snowfall"] }}cm</p>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <p class="mb-1"><strong>Sun Schedule</strong></p>
+                                    <p class="mb-1">Sunrise: {{ data["weather"][0]["sunrise"].split('T')[1] }}</p>
+                                    <p class="mb-1">Sunset: {{ data["weather"][0]["sunset"].split('T')[1] }}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -63,11 +80,14 @@
                         <div class="card h-100">
                             <div class="card-body text-center">
                                 <h5 class="card-title date-label">{{ day["date"] }}</h5>
-                                <i class="wi wi-day-cloudy weather-icon-small mb-3"></i>
+                                <i class="wi {% if day['precipitation_prob'] > 50 %}wi-day-rain{% else %}wi-day-sunny{% endif %} weather-icon-small mb-3"></i>
                                 <div class="weather-details">
-                                    <p class="mb-1"><strong>Max:</strong> {{ day["temperature_2m_max"] }}°C</p>
-                                    <p class="mb-1"><strong>Min:</strong> {{ day["temperature_2m_min"] }}°C</p>
-                                    <p class="mb-0"><strong>Humidity:</strong> {{ day["relative_humidity_2m_mean"] }}%</p>
+                                    <p class="mb-1">High: {{ day["temp_max"] }}°C</p>
+                                    <p class="mb-1">Low: {{ day["temp_min"] }}°C</p>
+                                    <p class="mb-1">Precip: {{ day["precipitation_prob"] }}%</p>
+                                    <small class="text-muted">
+                                        {{ day["sunrise"].split('T')[1] }} - {{ day["sunset"].split('T')[1] }}
+                                    </small>
                                 </div>
                             </div>
                         </div>

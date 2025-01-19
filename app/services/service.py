@@ -1,122 +1,94 @@
-import openmeteo_requests
-import requests_cache
-import pandas as pd
-from retry_requests import retry
+import requests
+import json
+from datetime import datetime
 from enum import Enum
 from ..errors import WeatherError, WeatherErrorType
 from . import geo_service as geo
 
-
-# Setup the Open-Meteo API client with cache and retry on error
-cache_session = requests_cache.CachedSession('.cache', expire_after=3600)
-retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
-openmeteo = openmeteo_requests.Client(session=retry_session)
-
-weather_moc = {
-        "latitude": 52.52,
-        "longitude": 13.419,
-        "elevation": 44.812,
-        "generationtime_ms": 2.2119,
-        "timezone": "Europe/Berlin",
-        "timezone_abbreviation": "CEST",
-        "hourly": {
-            "time": ["2022-07-01T00:00",
-                     "2022-07-01T01:00",
-                     "2022-07-01T02:00"],
-            "temperature_2m":
-            [13, 12.7, 12.7, 12.5, 12.5, 12.8, 13, 12.9, 13.3],
-        },
-        "hourly_units": {
-            "temperature_2m": "°C"
-        }
-    }
-
-
 class WeatherColumn(Enum):
-    """
-    Holds hourly parameters values for columns
-    its used when formating the data form the api
-    it should contain all the columns needed for formating
-    """
-    TEMP = "temperature_2m"
-    HUMID = "relative_humidity_2m"
+    TEMP_MAX = "temperature_2m_max"
+    TEMP_MIN = "temperature_2m_min"
+    SUNRISE = "sunrise"
+    SUNSET = "sunset"
+    SHOWERS = "showers_sum"
+    SNOWFALL = "snowfall_sum"
+    PRECIP_PROB = "precipitation_probability_max"
 
-def fetch_weather(city):
-    try:
-        coordinates = geo.get_geo(city)
-        if not coordinates:
-            raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
+class WeatherModel:
+    def __init__(self):
+        self.daily_data = {}
         
-        # Define API URL and parameters
-        url = "https://api.open-meteo.com/v1/forecast"
-        params = {
-            "latitude": coordinates.latitude,
-            "longitude": coordinates.longitude,
-            "hourly": f"{WeatherColumn.TEMP.value},{WeatherColumn.HUMID.value}",
-        }
-
-        # Fetch weather data
-        try:
-            responses = openmeteo.weather_api(url, params=params)
-            response = responses[0]
-            return response
-        except Exception as e:
-            raise WeatherError(WeatherErrorType.API_ERROR, str(e))
+    def parse_response(self, data):
+        daily = data.get('daily', {})
+        time = daily.get('time', [])
+        
+        formatted_data = []
+        for i in range(len(time)):
+            day_data = {
+                'date': datetime.strptime(time[i], '%Y-%m-%d').strftime('%B %d'),
+                'temp_max': round(daily[WeatherColumn.TEMP_MAX.value][i]),
+                'temp_min': round(daily[WeatherColumn.TEMP_MIN.value][i]),
+                'sunrise': daily[WeatherColumn.SUNRISE.value][i],
+                'sunset': daily[WeatherColumn.SUNSET.value][i],
+                'showers': daily[WeatherColumn.SHOWERS.value][i],
+                'snowfall': daily[WeatherColumn.SNOWFALL.value][i],
+                'precipitation_prob': daily[WeatherColumn.PRECIP_PROB.value][i]
+            }
+            formatted_data.append(day_data)
             
-    except WeatherError as weather_error:
-        raise weather_error
-    except requests_cache.exceptions.ConnectionError:
-        raise WeatherError(WeatherErrorType.NETWORK_ERROR)
-    except Exception as e:
-        raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
+        return formatted_data
 
-def format_weather(response):
-    try:
-        # Extract hourly data
-        hourly = response.Hourly()
-        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
-        hourly_humidity_2m = hourly.Variables(1).ValuesAsNumpy()
-
-        # Create a DataFrame with hourly data
-        hourly_data = {
-            "time": pd.date_range(
-                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-                freq=pd.Timedelta(seconds=hourly.Interval()),
-                inclusive="left"
-            ),
-            WeatherColumn.TEMP.value: hourly_temperature_2m,
-            WeatherColumn.HUMID.value: hourly_humidity_2m,
+class WeatherService:
+    def __init__(self):
+        self.base_url = "https://api.open-meteo.com/v1/forecast"
+    
+    def _build_params(self, lat, lon):
+        daily_params = ",".join([col.value for col in WeatherColumn])
+        return {
+            "latitude": lat,
+            "longitude": lon,
+            "daily": daily_params,
+            "timezone": "auto"
         }
-        hourly_dataframe = pd.DataFrame(data=hourly_data)
-
-        # Aggregate hourly data into daily summaries
-        daily_dataframe = hourly_dataframe.resample("D", on="time").agg({
-            WeatherColumn.TEMP.value: ["max", "min", "mean"],
-            WeatherColumn.HUMID.value: ["mean"],
-        })
-        daily_dataframe.columns = ["_".join(col) for col in daily_dataframe.columns]  # Flatten MultiIndex columns
-        daily_dataframe.reset_index(inplace=True)  # Changed from False to True
+    
+    def fetch_weather(self, city):
+        coordinates = geo.get_geo(city)
+        params = self._build_params(coordinates.latitude, coordinates.longitude)
         
-        # Add formatted date
-        daily_dataframe['date'] = daily_dataframe['time'].dt.strftime('%B %d')
-        
-        daily_dataframe = daily_dataframe.map(lambda x: int(x) if isinstance(x, (int, float)) else x)
-        daily_data_json = daily_dataframe.to_dict(orient="records")
-        return daily_data_json 
-    except Exception as e:
-        raise WeatherError(WeatherErrorType.INVALID_DATA, str(e))
+        try:
+            response = requests.get(self.base_url, params=params)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 404:
+                raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
+            else:
+                raise WeatherError(
+                    WeatherErrorType.API_ERROR,
+                    f"Weather API error: {response.status_code}"
+                )
+        except requests.exceptions.ConnectionError:
+            raise WeatherError(WeatherErrorType.NETWORK_ERROR)
+        except json.JSONDecodeError:
+            raise WeatherError(WeatherErrorType.INVALID_DATA)
 
 def get_weather(city):
     if not city or len(city.strip()) == 0:
         raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
+    
     try:
-        weather_data = fetch_weather(city)
+        weather_service = WeatherService()
+        weather_model = WeatherModel()
+        
+        # Get location data
         geo_data = geo.get_geo(city).__dict__
-        geo_data["weather"] = format_weather(weather_data)
+        
+        # Fetch and process weather data
+        weather_response = weather_service.fetch_weather(city)
+        geo_data["weather"] = weather_model.parse_response(weather_response)
         return geo_data
+        
     except WeatherError as weather_error:
-        raise weather_error 
+        raise weather_error
     except Exception as e:
         raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
 
