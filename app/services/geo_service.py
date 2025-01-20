@@ -28,7 +28,10 @@ def fetch(url):
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except (json.JSONDecodeError, ValueError) as e:  # Add ValueError to catch exceptions
+                raise WeatherError(WeatherErrorType.INVALID_DATA, f"Invalid response from geocoding service: {str(e)}")
         elif response.status_code == 404:
             raise WeatherError(WeatherErrorType.CITY_NOT_FOUND, "City not found in geocoding service")
         else:
@@ -36,8 +39,6 @@ def fetch(url):
                              f"Geocoding API error: {response.status_code}")
     except requests.exceptions.ConnectionError:
         raise WeatherError(WeatherErrorType.NETWORK_ERROR, "Could not connect to geocoding service")
-    except json.JSONDecodeError:
-        raise WeatherError(WeatherErrorType.INVALID_DATA, "Invalid response from geocoding service")
 
 def get_geo(name):
     if not name or not name.strip():

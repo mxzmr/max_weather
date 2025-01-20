@@ -9,10 +9,9 @@ class WeatherErrorType(Enum):
     FETCH_ERROR = "FETCH_ERROR"  # Add this line
 
 class WeatherError(Exception):
-    def __init__(self, error_type: WeatherErrorType, detail: str = None):
+    def __init__(self, error_type, message=None):
         self.error_type = error_type
-        self.detail = detail
-        super().__init__(self.detail)
+        super().__init__(message if message else str(error_type))
 
 def get_user_message(error_type: WeatherErrorType) -> dict:
     messages = {
