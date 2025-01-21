@@ -2,7 +2,7 @@ import pytest
 import requests
 from unittest.mock import Mock, patch
 from datetime import datetime
-from app.services.service import WeatherModel, WeatherService, get_weather, WeatherError, WeatherErrorType
+from app.services.weather_service import WeatherModel, WeatherService, get_weather, WeatherError, WeatherErrorType
 from app.services.geo_service import GeoModel
 
 @pytest.fixture

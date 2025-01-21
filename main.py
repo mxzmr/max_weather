@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
 import logging
-from .app.services.service import get_weather
+from .app.services.weather_service import get_weather
 from .app.errors import WeatherError, WeatherErrorType, get_user_message
 from .app.config import setup_logging
 

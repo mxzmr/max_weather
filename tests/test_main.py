@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, Mock
-from app.services.service import get_weather
+from app.services.weather_service import get_weather
 from app.services.geo_service import GeoModel
 from app.errors import WeatherError, WeatherErrorType
 
