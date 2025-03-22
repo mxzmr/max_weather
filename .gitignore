@@ -20,6 +20,9 @@
 !README.md
 !.env.example
 
+# Allow shell scripts
+!*.sh
+
 # Still ignore even if allowed above
 .env
 .cache
