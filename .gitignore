@@ -26,6 +26,7 @@
 # Allow docker files
 !Dockerfile
 !docker-compose.yml
+!.github/
 
 # Still ignore even if allowed above
 .env

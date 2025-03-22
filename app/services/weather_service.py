@@ -2,8 +2,8 @@ import requests
 import json
 from datetime import datetime
 from enum import Enum
-from ..errors import WeatherError, WeatherErrorType
-from . import geo_service as geo
+from app.errors import WeatherError, WeatherErrorType
+from app.services.geo_service import get_geo
 
 class WeatherColumn(Enum):
     TEMP_MAX = "temperature_2m_max"
@@ -52,7 +52,7 @@ class WeatherService:
         }
     
     def fetch_weather(self, city):
-        coordinates = geo.get_geo(city)
+        coordinates = get_geo(city)
         params = self._build_params(coordinates.latitude, coordinates.longitude)
         
         try:
@@ -80,7 +80,7 @@ def get_weather(city):
         weather_model = WeatherModel()
         
         # Get location data
-        geo_data = geo.get_geo(city).__dict__
+        geo_data = get_geo(city).__dict__
         
         # Fetch and process weather data
         weather_response = weather_service.fetch_weather(city)

@@ -3,4 +3,8 @@ requests
 python-dotenv
 pytest
 gunicorn
-
+flake8
+pytest-cov
+pytest-docker
+pytest-timeout
+docker
