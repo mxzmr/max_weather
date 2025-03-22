@@ -1,0 +1,35 @@
+# Deny everything by default
+*
+.*
+
+# Allow specific directories (add trailing slash for directories)
+!*/
+!app/
+!tests/
+
+# Allow specific file types in allowed directories
+!*.py
+!*.html
+!*.css
+!*.js
+!*.json
+
+# Allow specific files
+!.gitignore
+!requirements.txt
+!README.md
+!.env.example
+
+# Still ignore even if allowed above
+.env
+.cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.venv/
+venv/
+.idea/
+.vscode/

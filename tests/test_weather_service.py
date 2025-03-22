@@ -96,7 +96,7 @@ class TestWeatherService:
         assert 'timezone' in params
 
 class TestGetWeather:
-    @patch('app.services.service.WeatherService.fetch_weather')
+    @patch('app.services.weather_service.WeatherService.fetch_weather')
     @patch('app.services.geo_service.get_geo')
     def test_get_weather_success(self, mock_get_geo, mock_fetch_weather, mock_geo_data, mock_weather_response):
         mock_get_geo.return_value = mock_geo_data
