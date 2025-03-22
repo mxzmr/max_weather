@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    image: awsrepo/weather-app:latest
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/weather-app:latest
     container_name: weather-app
     ports:
       - "8080:8080"
