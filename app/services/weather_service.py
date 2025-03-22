@@ -19,24 +19,36 @@ class WeatherModel:
         self.daily_data = {}
         
     def parse_response(self, data):
-        daily = data.get('daily', {})
-        time = daily.get('time', [])
-        
-        formatted_data = []
-        for i in range(len(time)):
-            day_data = {
-                'date': datetime.strptime(time[i], '%Y-%m-%d').strftime('%B %d'),
-                'temp_max': round(daily[WeatherColumn.TEMP_MAX.value][i]),
-                'temp_min': round(daily[WeatherColumn.TEMP_MIN.value][i]),
-                'sunrise': daily[WeatherColumn.SUNRISE.value][i],
-                'sunset': daily[WeatherColumn.SUNSET.value][i],
-                'showers': daily[WeatherColumn.SHOWERS.value][i],
-                'snowfall': daily[WeatherColumn.SNOWFALL.value][i],
-                'precipitation_prob': daily[WeatherColumn.PRECIP_PROB.value][i]
-            }
-            formatted_data.append(day_data)
+        try:
+            daily = data.get('daily', {})
+            if not isinstance(daily, dict):
+                raise WeatherError(WeatherErrorType.INVALID_DATA, "Invalid daily data format")
+                
+            time = daily.get('time', [])
             
-        return formatted_data
+            # Validate that all required fields exist
+            for col in WeatherColumn:
+                if col.value not in daily:
+                    raise WeatherError(WeatherErrorType.INVALID_DATA, f"Missing {col.value} in response")
+            
+            formatted_data = []
+            for i in range(len(time)):
+                day_data = {
+                    'date': datetime.strptime(time[i], '%Y-%m-%d').strftime('%B %d'),
+                    'temp_max': round(daily[WeatherColumn.TEMP_MAX.value][i]),
+                    'temp_min': round(daily[WeatherColumn.TEMP_MIN.value][i]),
+                    'sunrise': daily[WeatherColumn.SUNRISE.value][i],
+                    'sunset': daily[WeatherColumn.SUNSET.value][i],
+                    'showers': daily[WeatherColumn.SHOWERS.value][i],
+                    'snowfall': daily[WeatherColumn.SNOWFALL.value][i],
+                    'precipitation_prob': daily[WeatherColumn.PRECIP_PROB.value][i]
+                }
+                formatted_data.append(day_data)
+                
+            return formatted_data
+            
+        except (TypeError, ValueError) as e:
+            raise WeatherError(WeatherErrorType.INVALID_DATA, str(e))
 
 class WeatherService:
     def __init__(self):
@@ -58,7 +70,13 @@ class WeatherService:
         try:
             response = requests.get(self.base_url, params=params)
             if response.status_code == 200:
-                return response.json()
+                try:
+                    data = response.json()
+                    if not isinstance(data, dict):
+                        raise WeatherError(WeatherErrorType.INVALID_DATA, "Invalid JSON response format")
+                    return data
+                except json.JSONDecodeError:
+                    raise WeatherError(WeatherErrorType.INVALID_DATA, "Invalid JSON response")
             elif response.status_code == 404:
                 raise WeatherError(WeatherErrorType.CITY_NOT_FOUND)
             else:
@@ -68,8 +86,6 @@ class WeatherService:
                 )
         except requests.exceptions.ConnectionError:
             raise WeatherError(WeatherErrorType.NETWORK_ERROR)
-        except json.JSONDecodeError:
-            raise WeatherError(WeatherErrorType.INVALID_DATA)
 
 def get_weather(city):
     if not city or len(city.strip()) == 0:
@@ -84,11 +100,16 @@ def get_weather(city):
         
         # Fetch and process weather data
         weather_response = weather_service.fetch_weather(city)
-        geo_data["weather"] = weather_model.parse_response(weather_response)
+        try:
+            geo_data["weather"] = weather_model.parse_response(weather_response)
+        except WeatherError:
+            raise
+        except Exception as e:
+            raise WeatherError(WeatherErrorType.INVALID_DATA, str(e))
         return geo_data
         
-    except WeatherError as weather_error:
-        raise weather_error
+    except WeatherError:
+        raise
     except Exception as e:
         raise WeatherError(WeatherErrorType.SERVER_ERROR, str(e))
 

@@ -4,6 +4,8 @@ import logging
 from app.services.weather_service import get_weather
 from app.errors import WeatherError, WeatherErrorType, get_user_message
 from app.config import setup_logging
+from datetime import datetime
+import platform
 
 app = Flask(__name__, template_folder="app/templates", static_folder="app/static")
 load_dotenv()
@@ -30,6 +32,13 @@ def home():
             error = get_user_message(WeatherErrorType.SERVER_ERROR)
     return render_template("index.html", data=data, error=error)
 
+@app.route("/health")
+def health():
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": platform.python_version(),
+    }
 
 if __name__ == "__main__":
     app.run("0.0.0.0", port=8080)

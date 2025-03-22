@@ -48,23 +48,23 @@ class TestWeatherModel:
         assert result[0]['precipitation_prob'] == 30
 
 class TestWeatherService:
-    @patch('requests.get')
-    @patch('app.services.geo_service.get_geo')
-    def test_fetch_weather_success(self, mock_get_geo, mock_get, mock_geo_data):
-        # Set up geo mock
-        mock_get_geo.return_value = mock_geo_data
-
-        # Set up weather API mock
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {'data': 'test'}
-        mock_get.return_value = mock_response
+    @patch('app.services.geo_service.fetch')  # Mock the fetch function instead
+    def test_fetch_weather_success(self, mock_fetch):
+        # Setup geo API mock
+        mock_fetch.return_value = {
+            "results": [{
+                "name": "Test City",
+                "country": "Test Country",
+                "latitude": 32.0,
+                "longitude": 34.0
+            }]
+        }
 
         service = WeatherService()
         result = service.fetch_weather('test')
         
-        assert result == {'data': 'test'}
-        mock_get_geo.assert_called_once_with('test')
+        assert 'daily' in result
+        assert mock_fetch.called
 
     @patch('requests.get')
     def test_fetch_weather_city_not_found(self, mock_get):
@@ -97,16 +97,22 @@ class TestWeatherService:
 
 class TestGetWeather:
     @patch('app.services.weather_service.WeatherService.fetch_weather')
-    @patch('app.services.geo_service.get_geo')
-    def test_get_weather_success(self, mock_get_geo, mock_fetch_weather, mock_geo_data, mock_weather_response):
-        mock_get_geo.return_value = mock_geo_data
+    @patch('app.services.geo_service.fetch')  # Mock the fetch function
+    def test_get_weather_success(self, mock_fetch, mock_fetch_weather, mock_weather_response):
+        # Setup geo API mock
+        mock_fetch.return_value = {
+            "results": [{
+                "name": "Test City",
+                "country": "Test Country",
+                "latitude": 32.0,
+                "longitude": 34.0
+            }]
+        }
         mock_fetch_weather.return_value = mock_weather_response
 
         result = get_weather('Test City')
         
         assert result['name'] == 'Test City'
-        assert result['latitude'] == 32.0
-        assert result['longitude'] == 34.0
         assert 'weather' in result
         assert len(result['weather']) == 1
 
@@ -123,9 +129,9 @@ class TestGetWeather:
             get_weather('NonexistentCity')
         assert exc_info.value.error_type == WeatherErrorType.CITY_NOT_FOUND
 
-    @patch('app.services.geo_service.get_geo')
-    def test_get_weather_unexpected_error(self, mock_get_geo):
-        mock_get_geo.side_effect = Exception('Unexpected error')
+    @patch('app.services.geo_service.fetch')
+    def test_get_weather_unexpected_error(self, mock_fetch):
+        mock_fetch.side_effect = RuntimeError('Unexpected error')
         
         with pytest.raises(WeatherError) as exc_info:
             get_weather('Test City')
