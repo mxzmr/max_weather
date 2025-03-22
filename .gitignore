@@ -23,6 +23,10 @@
 # Allow shell scripts
 !*.sh
 
+# Allow docker files
+!Dockerfile
+!docker-compose.yml
+
 # Still ignore even if allowed above
 .env
 .cache
