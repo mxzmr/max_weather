@@ -1,0 +1,6 @@
+flake8
+pytest-cov
+pytest-docker
+pytest-timeout
+docker
+pytest

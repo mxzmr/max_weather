@@ -17,6 +17,7 @@
 # Allow specific files
 !.gitignore
 !requirements.txt
+!requirements-dev.txt
 !README.md
 !.env.example
 
